@@ -1,8 +1,3 @@
-¡Claro que sí\! Aquí tienes una plantilla profesional y atractiva para el `README.md` de tu proyecto, usando la información que me diste.
-
-Simplemente **copia y pega** este contenido en un archivo llamado `README.md` en la raíz de tu proyecto.
-
------
 
 # 🚀 Plataforma IoT con Servicios SOAP y REST
 
