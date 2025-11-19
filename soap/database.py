@@ -3,15 +3,14 @@ from mysql.connector import Error, errorcode, ClientFlag
 import os
 
 def conectar():
-    # --- FORZAMOS LAS CREDENCIALES CORRECTAS ---
-    # Ignoramos variables de entorno por ahora para evitar conflictos en tu PC
+
     host = 'trolley.proxy.rlwy.net'
     port = 20152
     user = 'root'
     password = 'jmEAeVbihCZbTBRjfxxINhnmuDoJtHFD'
     database = 'railway'
 
-    print(f"Conectando a: {host}:{port} con usuario {user}...") # Mensaje de depuración
+    print(f"Conectando a: {host}:{port} con usuario {user}...")
 
     try:
         kwargs = {
@@ -21,13 +20,6 @@ def conectar():
             'password': password,
             'database': database,
         }
-
-        # Solo usamos SSL si realmente es necesario (Railway externo a veces no lo pide)
-        # Si falla, puedes probar descomentando las siguientes 3 lineas:
-        # ssl_ca = os.getenv('MYSQLSSL_CA')
-        # if ssl_ca:
-        #    kwargs['client_flags'] = [ClientFlag.SSL]
-        #    kwargs['ssl_ca'] = ssl_ca
 
         conn = mysql.connector.connect(**kwargs)
         print("¡Conexión EXITOSA!")
@@ -43,7 +35,6 @@ def crear_tablas():
 
     cur = conn.cursor()
 
-    # Aquí van tus tablas (resumido, el contenido es el mismo de antes)
     # 1. USUARIOS
     cur.execute('''CREATE TABLE IF NOT EXISTS usuarios (
         id_usuario BIGINT PRIMARY KEY AUTO_INCREMENT,

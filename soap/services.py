@@ -157,7 +157,6 @@ class ApiService(ServiceBase):
         if conn is None: raise Fault(faultstring="Error de conexión")
         try:
             cur = conn.cursor()
-            # OJO: Usamos 'dispositivos_iot' en minúsculas para coincidir con Java
             cur.execute("INSERT INTO dispositivos_iot (modelo) VALUES (%s)", (modelo,))
             conn.commit()
             nuevo_id = cur.lastrowid
@@ -295,7 +294,6 @@ class ApiService(ServiceBase):
         if conn is None: raise Fault(faultstring="Error de conexión")
         try:
             cur = conn.cursor()
-            # Resumen de Actividad Fisica (Tabla Actividad_Fisica)
             cur.execute("""
                 SELECT IFNULL(SUM(km_recorridos),0), IFNULL(SUM(calorias_quemadas),0),
                        IFNULL(SUM(TIMESTAMPDIFF(MINUTE, fecha_hora_inicio, fecha_hora_fin)),0)
