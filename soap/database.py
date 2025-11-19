@@ -1,16 +1,17 @@
 import mysql.connector
 from mysql.connector import Error, errorcode, ClientFlag
-import datetime
 import os
 
 def conectar():
-    host = os.getenv('MYSQLHOST', 'mysql.railway.internal')
-    port = int(os.getenv('MYSQLPORT', '3306'))
-    user = os.getenv('MYSQLUSER', 'root')
-    password = os.getenv('MYSQLPASSWORD', 'JHhFMbnxuZswisPobQFldYEGCPnQqGUK')
-    database = os.getenv('MYSQLDATABASE', 'railway')
+    # --- FORZAMOS LAS CREDENCIALES CORRECTAS ---
+    # Ignoramos variables de entorno por ahora para evitar conflictos en tu PC
+    host = 'trolley.proxy.rlwy.net'
+    port = 20152
+    user = 'root'
+    password = 'jmEAeVbihCZbTBRjfxxINhnmuDoJtHFD'
+    database = 'railway'
 
-    ssl_ca = os.getenv('MYSQLSSL_CA')
+    print(f"Conectando a: {host}:{port} con usuario {user}...") # Mensaje de depuración
 
     try:
         kwargs = {
@@ -20,29 +21,18 @@ def conectar():
             'password': password,
             'database': database,
         }
-        if ssl_ca:
-            kwargs['client_flags'] = [ClientFlag.SSL]
-            kwargs['ssl_ca'] = ssl_ca
+
+        # Solo usamos SSL si realmente es necesario (Railway externo a veces no lo pide)
+        # Si falla, puedes probar descomentando las siguientes 3 lineas:
+        # ssl_ca = os.getenv('MYSQLSSL_CA')
+        # if ssl_ca:
+        #    kwargs['client_flags'] = [ClientFlag.SSL]
+        #    kwargs['ssl_ca'] = ssl_ca
+
         conn = mysql.connector.connect(**kwargs)
+        print("¡Conexión EXITOSA!")
         return conn
     except Error as e:
-        if getattr(e, 'errno', None) == errorcode.ER_BAD_DB_ERROR and host in ('127.0.0.1', 'localhost'):
-            tmp_kwargs = {
-                'host': host,
-                'port': port,
-                'user': user,
-                'password': password,
-            }
-            if ssl_ca:
-                tmp_kwargs['client_flags'] = [ClientFlag.SSL]
-                tmp_kwargs['ssl_ca'] = ssl_ca
-            tmp = mysql.connector.connect(**tmp_kwargs)
-            cur = tmp.cursor()
-            cur.execute(f"CREATE DATABASE IF NOT EXISTS {database} CHARACTER SET utf8mb4")
-            tmp.commit()
-            tmp.close()
-            conn = mysql.connector.connect(**kwargs)
-            return conn
         print(f"Error al conectar a MySQL: {e}")
         return None
 
@@ -53,6 +43,8 @@ def crear_tablas():
 
     cur = conn.cursor()
 
+    # Aquí van tus tablas (resumido, el contenido es el mismo de antes)
+    # 1. USUARIOS
     cur.execute('''CREATE TABLE IF NOT EXISTS usuarios (
         id_usuario BIGINT PRIMARY KEY AUTO_INCREMENT,
         `nombre(s)` VARCHAR(100) NOT NULL,
@@ -64,6 +56,7 @@ def crear_tablas():
         altura DOUBLE
     ) ENGINE=InnoDB;''')
 
+    # 2. DISPOSITIVOS
     cur.execute('''CREATE TABLE IF NOT EXISTS Dispositivos (
         id_dispositivo BIGINT PRIMARY KEY AUTO_INCREMENT,
         id_usuario BIGINT NOT NULL,
@@ -72,6 +65,13 @@ def crear_tablas():
         FOREIGN KEY(id_usuario) REFERENCES usuarios(id_usuario)
     ) ENGINE=InnoDB;''')
 
+    # 3. DISPOSITIVOS IOT
+    cur.execute('''CREATE TABLE IF NOT EXISTS dispositivos_iot (
+        id_dispositivo BIGINT PRIMARY KEY AUTO_INCREMENT,
+        modelo VARCHAR(100) NOT NULL
+    ) ENGINE=InnoDB;''')
+
+    # 4. ACTIVIDAD FISICA
     cur.execute('''CREATE TABLE IF NOT EXISTS Actividad_Fisica (
         id_actividad BIGINT PRIMARY KEY AUTO_INCREMENT,
         id_usuario BIGINT NOT NULL,
@@ -86,6 +86,7 @@ def crear_tablas():
         FOREIGN KEY(id_dispositivo) REFERENCES Dispositivos(id_dispositivo)
     ) ENGINE=InnoDB;''')
 
+    # 5. DATOS SENSORES
     cur.execute('''CREATE TABLE IF NOT EXISTS Datos_Sensores (
         id_dato BIGINT PRIMARY KEY AUTO_INCREMENT,
         id_actividad BIGINT NOT NULL,
@@ -96,6 +97,36 @@ def crear_tablas():
         FOREIGN KEY(id_actividad) REFERENCES Actividad_Fisica(id_actividad)
     ) ENGINE=InnoDB;''')
 
-    print("Tablas creadas/verificadas exitosamente.")
+    # 6. SESIONES
+    cur.execute('''CREATE TABLE IF NOT EXISTS Sesiones_Entrenamiento (
+        id_sesion BIGINT PRIMARY KEY AUTO_INCREMENT,
+        id_usuario BIGINT NOT NULL,
+        tipo_actividad VARCHAR(100),
+        fecha_hora_inicio DATETIME,
+        fecha_hora_fin DATETIME,
+        duracion_segundos INTEGER,
+        distancia_metros DOUBLE,
+        calorias_quemadas INTEGER,
+        latitud_inicio DOUBLE,
+        longitud_inicio DOUBLE,
+        ritmo_promedio INTEGER,
+        FOREIGN KEY(id_usuario) REFERENCES usuarios(id_usuario)
+    ) ENGINE=InnoDB;''')
+
+    # 7. FRECUENCIA
+    cur.execute('''CREATE TABLE IF NOT EXISTS frecuencia_cardiaca (
+        id_frecuencia BIGINT PRIMARY KEY AUTO_INCREMENT,
+        id_actividad BIGINT NOT NULL,
+        fecha_hora_registro DATETIME NOT NULL,
+        frecuencia_cardiaca INTEGER,
+        oxigenacion INTEGER,
+        presion VARCHAR(255),
+        FOREIGN KEY(id_actividad) REFERENCES Sesiones_Entrenamiento(id_sesion)
+    ) ENGINE=InnoDB;''')
+
+    print("Tablas verificadas/creadas correctamente.")
     conn.commit()
     conn.close()
+
+if __name__ == "__main__":
+    crear_tablas()
