@@ -4,279 +4,221 @@
 # Luis Gabriel Venegas Saucedo 
 # Joshua Neftali Marin Leynez
 
-Modelos principales
 
-- Usuario: `id_usuario`, `nombre`, `apellido`, `correoElectronico`, `fechaDeNacimiento`, `genero`, `peso`, `altura`
-- Dispositivo: `id_dispositivo`, `id_usuario`, `marca`, `numero_serie`
-- ActividadFisica: `id_actividad`, `id_usuario`, `id_dispositivo`, `fecha_hora_inicio`, `fecha_hora_fin`, `km_recorridos`, `calorias_quemadas`, `frecuencia_cardiaca`, `oxigenacion`
-- DatosSensor: `id_dato`, `id_actividad`, `fecha_hora_registro`, `frecuencia_cardiaca`, `oxigenacion`, `presion`
-- ResumenActividad: `fecha`, `total_km`, `total_calorias`, `promedio_frecuencia`, `promedio_oxigenacion`, `duracion_total_min`
 
-## Usuarios
+## 🚀 API REST (Spring Boot) - Endpoints
 
-### crear_usuario
+La API utiliza JSON para el intercambio de datos.
 
-- Descripción: Crea un usuario.
-- Request Body (XML)
+### 1\. Gestión de Usuarios (`/api/usuarios`)
+
+Control total sobre los perfiles de los atletas.
+
+| Método | Endpoint | Descripción |
+| :--- | :--- | :--- |
+| `GET` | `/` | Lista todos los usuarios registrados. |
+| `GET` | `/{id}` | Obtiene el detalle de un usuario por su ID. |
+| `POST` | `/` | Registra un nuevo usuario. |
+| `PUT` | `/{id}` | Actualiza la información de un usuario existente. |
+| `DELETE` | `/{id}` | Elimina un usuario del sistema. |
+
+**Ejemplo de Payload (POST/PUT):**
+
+```json
+{
+    "nombre": "Luis",
+    "apellido": "Venegas",
+    "correoElectronico": "luis.venegas@email.com",
+    "fechaDeNacimiento": "2000-01-01",
+    "genero": "Masculino",
+    "peso": 75.5,
+    "altura": 1.78
+}
+```
+
+### 2\. Sesiones de Entrenamiento (`/api/sesion_entrenamiento`)
+
+Registro de actividades deportivas (Correr, Nadar, Ciclismo, etc.).
+
+| Método | Endpoint | Descripción |
+| :--- | :--- | :--- |
+| `GET` | `/` | Historial completo de sesiones. |
+| `GET` | `/{id}` | Detalle de una sesión específica. |
+| `POST` | `/` | Crea una nueva sesión de entrenamiento. |
+| `PUT` | `/{id}` | Modifica una sesión existente. |
+| `DELETE` | `/{id}` | Elimina una sesión. |
+
+**Ejemplo de Payload (POST):**
+
+```json
+{
+    "usuario": {
+        "id_usuario": 1
+    },
+    "tipoActividad": "Correr",
+    "fechaHoraInicio": "2024-05-20T08:00:00",
+    "fechaHoraFin": "2024-05-20T09:00:00",
+    "duracionSegundos": 3600,
+    "distanciaMetros": 10000.0,
+    "caloriasQuemadas": 750,
+    "latitudInicio": 19.432608,
+    "longitudInicio": -99.133209,
+    "ritmoPromedio": 5
+}
+```
+
+*Tipos de Actividad Soportados:* `Correr`, `Caminar`, `Nadar`, `Ciclismo`, `Levantamiento_de_pesas`, `Yoga`, `Otro`.
+
+### 3\. Frecuencia Cardíaca (`/api/frecuencia_cardiaca`)
+
+Registro detallado de métricas biométricas vinculadas a una sesión.
+
+| Método | Endpoint | Descripción |
+| :--- | :--- | :--- |
+| `GET` | `/` | Lista todas las mediciones. |
+| `GET` | `/{id}` | Obtiene una medición específica. |
+| `POST` | `/` | Registra una medición puntual. |
+| `PUT` | `/{id}` | Actualiza una medición. |
+| `DELETE` | `/{id}` | Elimina una medición. |
+
+**Ejemplo de Payload (POST):**
+
+```json
+{
+    "sesionEntrenamiento": {
+        "id_sesion": 1
+    },
+    "fechaHoraRegistro": "2024-05-20T08:15:00",
+    "frecuenciaCardiaca": 145,
+    "oxigenacion": 98,
+    "presion": "120/80"
+}
+```
+
+-----
+
+## 📦 API SOAP (Python) - Operaciones
+
+Todas las peticiones deben ser `POST` con `Content-Type: text/xml`.
+Namespace: `xmlns:iot="iot.soap"`
+
+### 1\. Inventario de Dispositivos (Usuarios)
+
+Gestión de la asignación de dispositivos a usuarios (Tabla `Dispositivos`).
+
+  * **`crear_dispositivo`**: Asigna un dispositivo a un usuario.
+  * **`obtener_dispositivo`**: Busca un dispositivo por su ID único.
+  * **`listar_dispositivos_por_usuario`**: Muestra todos los dispositivos de un usuario.
+  * **`listar_dispositivos`**: Inventario global de dispositivos asignados.
+  * **`actualizar_dispositivo`**: Modifica marca o número de serie.
+  * **`eliminar_dispositivo`**: Desvincula/Borra un dispositivo.
+
+**Ejemplo XML (Crear Dispositivo):**
 
 ```xml
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iot="iot.soap">
-  <soapenv:Body>
-    <iot:crear_usuario>
-      <iot:nombre>Juan</iot:nombre>
-      <iot:apellidos>Pérez</iot:apellidos>
-      <iot:correo_electronico>juan@example.com</iot:correo_electronico>
-      <iot:fecha_de_nacimiento>1990-01-01</iot:fecha_de_nacimiento>
-      <iot:genero>Masculino</iot:genero>
-      <iot:peso>70</iot:peso>
-      <iot:altura>1.75</iot:altura>
-    </iot:crear_usuario>
-  </soapenv:Body>
+   <soapenv:Body>
+      <iot:crear_dispositivo>
+         <iot:id_usuario>1</iot:id_usuario>
+         <iot:marca>Garmin</iot:marca>
+         <iot:numero_serie>SN-123456789</iot:numero_serie>
+      </iot:crear_dispositivo>
+   </soapenv:Body>
 </soapenv:Envelope>
 ```
 
-- Response: `Usuario`
+### 2\. Catálogo IoT
 
-### listar_usuarios
+Gestión de modelos de dispositivos soportados (Tabla `dispositivos_iot`).
 
-- Descripción: Devuelve todos los usuarios.
-- Request Body (XML)
+  * **`crear_dispositivo_iot`**: Registra un nuevo modelo en el catálogo.
+  * **`listar_dispositivos_iot`**: Lista todos los modelos disponibles.
+
+**Ejemplo XML (Crear Modelo):**
 
 ```xml
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iot="iot.soap">
-  <soapenv:Body>
-    <iot:listar_usuarios/>
-  </soapenv:Body>
+   <soapenv:Body>
+      <iot:crear_dispositivo_iot>
+         <iot:modelo>Apple Watch Series 9</iot:modelo>
+      </iot:crear_dispositivo_iot>
+   </soapenv:Body>
 </soapenv:Envelope>
 ```
 
-- Response: `Array(Usuario)`
+### 3\. Usuarios (Solo Lectura)
 
-## Dispositivos
+Espejo de la tabla de usuarios para sistemas SOAP.
 
-### crear_dispositivo
+  * **`listar_usuarios`**: Devuelve la lista de usuarios (creados en REST) para consulta desde SOAP.
 
-- Descripción: Crea un dispositivo asociado a un usuario.
-- Requiere: `id_usuario` existente.
-- Request Body (XML)
+### 4\. Gestión de Sesiones (SOAP)
+
+Funcionalidad espejo para registrar entrenamientos desde clientes SOAP.
+
+  * **`crear_sesion`**: Permite registrar una sesión de entrenamiento.
+  * **`listar_sesiones_por_usuario`**: Consulta sesiones en un rango de fechas.
+
+**Ejemplo XML (Crear Sesión):**
 
 ```xml
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iot="iot.soap">
-  <soapenv:Body>
-    <iot:crear_dispositivo>
-      <iot:id_usuario>1</iot:id_usuario>
-      <iot:marca>Garmin</iot:marca>
-      <iot:numero_serie>ABC123</iot:numero_serie>
-    </iot:crear_dispositivo>
-  </soapenv:Body>
+   <soapenv:Body>
+      <iot:crear_sesion>
+         <iot:id_usuario>1</iot:id_usuario>
+         <iot:tipo_actividad>Ciclismo</iot:tipo_actividad>
+         <iot:fecha_hora_inicio>2024-06-01T10:00:00</iot:fecha_hora_inicio>
+         <iot:fecha_hora_fin>2024-06-01T12:00:00</iot:fecha_hora_fin>
+         <iot:duracion_segundos>7200</iot:duracion_segundos>
+         <iot:distancia_metros>45000.5</iot:distancia_metros>
+         <iot:calorias_quemadas>1200</iot:calorias_quemadas>
+         <iot:latitud_inicio>19.43</iot:latitud_inicio>
+         <iot:longitud_inicio>-99.13</iot:longitud_inicio>
+         <iot:ritmo_promedio>25</iot:ritmo_promedio>
+      </iot:crear_sesion>
+   </soapenv:Body>
 </soapenv:Envelope>
 ```
 
-- Response: `Dispositivo`
+### 5\. Actividad Física y Sensores (Datos Crudos)
 
-### obtener_dispositivo
+Módulo para la ingesta de datos raw desde los dispositivos.
 
-- Request Body (XML)
+  * **`crear_actividad`**: Registra un bloque de actividad física general.
+  * **`registrar_dato_sensor`**: Inserta un dato puntual de sensores (FC, Oxigenación, Presión) vinculado a una actividad.
+
+**Ejemplo XML (Registrar Dato Sensor):**
 
 ```xml
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iot="iot.soap">
-  <soapenv:Body>
-    <iot:obtener_dispositivo>
-      <iot:id_dispositivo>10</iot:id_dispositivo>
-    </iot:obtener_dispositivo>
-  </soapenv:Body>
+   <soapenv:Body>
+      <iot:registrar_dato_sensor>
+         <iot:id_actividad>1</iot:id_actividad>
+         <iot:id_usuario>1</iot:id_usuario>
+         <iot:fecha_hora_registro>2024-06-01T10:05:00</iot:fecha_hora_registro>
+         <iot:frecuencia_cardiaca>135</iot:frecuencia_cardiaca>
+         <iot:oxigenacion>97</iot:oxigenacion>
+         <iot:presion>120/80</iot:presion>
+      </iot:registrar_dato_sensor>
+   </soapenv:Body>
 </soapenv:Envelope>
 ```
 
-- Response: `Dispositivo`
+### 6\. Reportes
 
-### listar_dispositivos_por_usuario
+Generación de resúmenes y analíticas.
 
-- Request Body (XML)
+  * **`resumen_diario_usuario`**: Calcula el total de kilómetros, calorías y promedios biométricos de un usuario en una fecha específica.
+
+**Ejemplo XML:**
 
 ```xml
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iot="iot.soap">
-  <soapenv:Body>
-    <iot:listar_dispositivos_por_usuario>
-      <iot:id_usuario>1</iot:id_usuario>
-    </iot:listar_dispositivos_por_usuario>
-  </soapenv:Body>
+   <soapenv:Body>
+      <iot:resumen_diario_usuario>
+         <iot:id_usuario>1</iot:id_usuario>
+         <iot:fecha>2024-06-01</iot:fecha>
+      </iot:resumen_diario_usuario>
+   </soapenv:Body>
 </soapenv:Envelope>
 ```
-
-- Response: `Array(Dispositivo)`
-
-### listar_dispositivos
-
-- Request Body (XML)
-
-```xml
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iot="iot.soap">
-  <soapenv:Body>
-    <iot:listar_dispositivos/>
-  </soapenv:Body>
-</soapenv:Envelope>
-```
-
-- Response: `Array(Dispositivo)`
-
-### actualizar_dispositivo
-
-- Descripción: Actualiza `marca` y `numero_serie`.
-- Request Body (XML)
-
-```xml
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iot="iot.soap">
-  <soapenv:Body>
-    <iot:actualizar_dispositivo>
-      <iot:id_dispositivo>10</iot:id_dispositivo>
-      <iot:marca>Polar</iot:marca>
-      <iot:numero_serie>XYZ789</iot:numero_serie>
-    </iot:actualizar_dispositivo>
-  </soapenv:Body>
-</soapenv:Envelope>
-```
-
-- Response: `Dispositivo`
-
-### eliminar_dispositivo
-
-- Request Body (XML)
-
-```xml
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iot="iot.soap">
-  <soapenv:Body>
-    <iot:eliminar_dispositivo>
-      <iot:id_dispositivo>10</iot:id_dispositivo>
-    </iot:eliminar_dispositivo>
-  </soapenv:Body>
-</soapenv:Envelope>
-```
-
-- Response: `Boolean`
-
-## Actividad Física
-
-### crear_actividad
-
-- Descripción: Crea una sesión de actividad para un usuario y dispositivo.
-- Requiere: `id_usuario` y `id_dispositivo` válidos.
-- Tipos de fecha: `fecha_hora_inicio` y `fecha_hora_fin` en ISO8601.
-- Request Body (XML)
-
-```xml
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iot="iot.soap">
-  <soapenv:Body>
-    <iot:crear_actividad>
-      <iot:id_usuario>1</iot:id_usuario>
-      <iot:id_dispositivo>10</iot:id_dispositivo>
-      <iot:fecha_hora_inicio>2025-11-18T07:00:00</iot:fecha_hora_inicio>
-      <iot:fecha_hora_fin>2025-11-18T07:45:00</iot:fecha_hora_fin>
-      <iot:km_recorridos>5.2</iot:km_recorridos>
-      <iot:calorias_quemadas>420</iot:calorias_quemadas>
-      <iot:frecuencia_cardiaca>138</iot:frecuencia_cardiaca>
-      <iot:oxigenacion>97</iot:oxigenacion>
-    </iot:crear_actividad>
-  </soapenv:Body>
-</soapenv:Envelope>
-```
-
-- Response: `ActividadFisica`
-
-### listar_actividades_por_usuario
-
-- Request Body (XML)
-
-```xml
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iot="iot.soap">
-  <soapenv:Body>
-    <iot:listar_actividades_por_usuario>
-      <iot:id_usuario>1</iot:id_usuario>
-      <iot:fecha_inicio>2025-11-18T00:00:00</iot:fecha_inicio>
-      <iot:fecha_fin>2025-11-18T23:59:59</iot:fecha_fin>
-    </iot:listar_actividades_por_usuario>
-  </soapenv:Body>
-</soapenv:Envelope>
-```
-
-- Response: `Array(ActividadFisica)`
-
-### resumen_diario_usuario
-
-- Descripción: Devuelve totals y promedios del día para el usuario.
-- Cálculos: `SUM(km/calorías)`, `SUM(duración_min)`, `AVG(frecuencia/oxigenación)`.
-- Request Body (XML)
-
-```xml
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iot="iot.soap">
-  <soapenv:Body>
-    <iot:resumen_diario_usuario>
-      <iot:id_usuario>1</iot:id_usuario>
-      <iot:fecha>2025-11-18</iot:fecha>
-    </iot:resumen_diario_usuario>
-  </soapenv:Body>
-</soapenv:Envelope>
-```
-
-- Response: `ResumenActividad`
-
-## Datos de Sensores
-
-### registrar_dato_sensor
-
-- Descripción: Registra una muestra de sensor para una actividad del usuario.
-- Valida que la actividad pertenece al usuario.
-- Request Body (XML)
-
-```xml
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iot="iot.soap">
-  <soapenv:Body>
-    <iot:registrar_dato_sensor>
-      <iot:id_actividad>5</iot:id_actividad>
-      <iot:id_usuario>1</iot:id_usuario>
-      <iot:fecha_hora_registro>2025-11-18T07:30:00</iot:fecha_hora_registro>
-      <iot:frecuencia_cardiaca>92</iot:frecuencia_cardiaca>
-      <iot:oxigenacion>98</iot:oxigenacion>
-      <iot:presion>120/80</iot:presion>
-    </iot:registrar_dato_sensor>
-  </soapenv:Body>
-</soapenv:Envelope>
-```
-
-- Response: `DatosSensor`
-
-### listar_frecuencia_cardiaca_usuario
-
-- Descripción: Lista muestras de frecuencia cardiaca del usuario para una fecha.
-- Request Body (XML)
-
-```xml
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iot="iot.soap">
-  <soapenv:Body>
-    <iot:listar_frecuencia_cardiaca_usuario>
-      <iot:id_usuario>1</iot:id_usuario>
-      <iot:fecha>2025-11-18</iot:fecha>
-    </iot:listar_frecuencia_cardiaca_usuario>
-  </soapenv:Body>
-</soapenv:Envelope>
-```
-
-- Response: `Array(DatosSensor)`
-
-## Errores
-
-- Los errores se devuelven como `<soap:Fault>` con `faultstring` descriptivo.
-- Casos comunes:
-  - FK inválida (`1452`): usuario o dispositivo inexistente.
-  - Duplicado (`1062`): `numero_serie` repetido.
-  - Actividad no pertenece al usuario al registrar datos.
-  - Conexión fallida: revisa variables de entorno de Railway y TLS.
-
-## Pruebas rápidas en Postman
-
-- Importa el WSDL: `http://localhost:8000/?wsdl`.
-- Configura cada request con `POST` y `Content-Type: text/xml; charset=utf-8`.
-- Verifica contra Railway:
-  - Crea un usuario y un dispositivo; consulta en MySQL (Railway) que se insertaron.
-  - Crea una actividad y registra datos de sensores; ejecuta `SELECT COUNT(*)` en `Actividad_Fisica` y `Datos_Sensores` en Railway.
-
