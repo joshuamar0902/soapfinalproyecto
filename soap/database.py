@@ -1,36 +1,47 @@
 import mysql.connector
-from mysql.connector import Error, errorcode
+from mysql.connector import Error, errorcode, ClientFlag
 import datetime
+import os
 
 def conectar():
+    host = os.getenv('MYSQLHOST', 'mysql.railway.internal')
+    port = int(os.getenv('MYSQLPORT', '3306'))
+    user = os.getenv('MYSQLUSER', 'root')
+    password = os.getenv('MYSQLPASSWORD', 'JHhFMbnxuZswisPobQFldYEGCPnQqGUK')
+    database = os.getenv('MYSQLDATABASE', 'railway')
+
+    ssl_ca = os.getenv('MYSQLSSL_CA')
+
     try:
-        conn = mysql.connector.connect(
-            host='127.0.0.1',
-            port=3306,
-            user='root',
-            password='root',
-            database='iotsoap'
-        )
+        kwargs = {
+            'host': host,
+            'port': port,
+            'user': user,
+            'password': password,
+            'database': database,
+        }
+        if ssl_ca:
+            kwargs['client_flags'] = [ClientFlag.SSL]
+            kwargs['ssl_ca'] = ssl_ca
+        conn = mysql.connector.connect(**kwargs)
         return conn
     except Error as e:
-        if getattr(e, 'errno', None) == errorcode.ER_BAD_DB_ERROR:
-            tmp = mysql.connector.connect(
-                host='127.0.0.1',
-                port=3306,
-                user='root',
-                password='root'
-            )
+        if getattr(e, 'errno', None) == errorcode.ER_BAD_DB_ERROR and host in ('127.0.0.1', 'localhost'):
+            tmp_kwargs = {
+                'host': host,
+                'port': port,
+                'user': user,
+                'password': password,
+            }
+            if ssl_ca:
+                tmp_kwargs['client_flags'] = [ClientFlag.SSL]
+                tmp_kwargs['ssl_ca'] = ssl_ca
+            tmp = mysql.connector.connect(**tmp_kwargs)
             cur = tmp.cursor()
-            cur.execute("CREATE DATABASE IF NOT EXISTS iotsoap CHARACTER SET utf8mb4")
+            cur.execute(f"CREATE DATABASE IF NOT EXISTS {database} CHARACTER SET utf8mb4")
             tmp.commit()
             tmp.close()
-            conn = mysql.connector.connect(
-                host='127.0.0.1',
-                port=3306,
-                user='root',
-                password='root',
-                database='iotsoap'
-            )
+            conn = mysql.connector.connect(**kwargs)
             return conn
         print(f"Error al conectar a MySQL: {e}")
         return None

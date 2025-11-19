@@ -38,3 +38,12 @@ class DatosSensor(ComplexModel):
     frecuencia_cardiaca = Integer
     oxigenacion = Integer
     presion = Unicode(255)
+
+class ResumenActividad(ComplexModel):
+    __namespace__ = 'iot.soap.model'
+    fecha = Date
+    total_km = Double
+    total_calorias = Double
+    promedio_frecuencia = Integer
+    promedio_oxigenacion = Integer
+    duracion_total_min = Double
