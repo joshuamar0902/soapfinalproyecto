@@ -4,6 +4,80 @@ from modelos import Dispositivo, Usuario, ActividadFisica, DatosSensor, ResumenA
 import database
 from mysql.connector import Error
 from spyne import Fault
+from datetime import datetime, date
+
+def _validate_positive_int(name, value):
+    try:
+        v = int(value)
+    except Exception:
+        raise Fault(faultstring=f"{name} inválido")
+    if v <= 0:
+        raise Fault(faultstring=f"{name} inválido")
+
+def _validate_non_empty_str(name, value, max_len=None):
+    if value is None:
+        raise Fault(faultstring=f"{name} requerido")
+    s = str(value).strip()
+    if not s:
+        raise Fault(faultstring=f"{name} requerido")
+    if max_len is not None and len(s) > max_len:
+        raise Fault(faultstring=f"{name} excede longitud")
+
+def _parse_datetime(name, value):
+    if isinstance(value, datetime):
+        return value
+    if value is None:
+        raise Fault(faultstring=f"{name} no es una fecha-hora válida")
+    try:
+        return datetime.fromisoformat(str(value).replace('Z','+00:00'))
+    except Exception:
+        try:
+            return datetime.strptime(str(value), "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            raise Fault(faultstring=f"{name} no es una fecha-hora válida")
+
+def _parse_date(name, value):
+    if isinstance(value, date):
+        return value
+    if value is None:
+        raise Fault(faultstring=f"{name} no es una fecha válida")
+    try:
+        return datetime.strptime(str(value), "%Y-%m-%d").date()
+    except Exception:
+        raise Fault(faultstring=f"{name} no es una fecha válida")
+
+def _validate_range(name, value, min_value=None, max_value=None):
+    try:
+        v = float(value)
+    except Exception:
+        raise Fault(faultstring=f"{name} inválido")
+    if min_value is not None and v < min_value:
+        raise Fault(faultstring=f"{name} fuera de rango")
+    if max_value is not None and v > max_value:
+        raise Fault(faultstring=f"{name} fuera de rango")
+
+def _validate_latlng(lat, lon):
+    _validate_range("latitud", lat, -90, 90)
+    _validate_range("longitud", lon, -180, 180)
+
+def _user_exists(conn, id_usuario):
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM usuarios WHERE id_usuario=%s", (id_usuario,))
+    return cur.fetchone() is not None
+
+def _device_row(conn, id_dispositivo):
+    cur = conn.cursor()
+    cur.execute("SELECT id_usuario FROM Dispositivos WHERE id_dispositivo=%s", (id_dispositivo,))
+    return cur.fetchone()
+
+def _device_belongs_to_user(conn, id_dispositivo, id_usuario):
+    row = _device_row(conn, id_dispositivo)
+    if not row:
+        return False
+    try:
+        return int(row[0]) == int(id_usuario)
+    except Exception:
+        return False
 
 class ApiService(ServiceBase):
 
@@ -16,6 +90,11 @@ class ApiService(ServiceBase):
         if conn is None:
             raise Fault(faultstring="Error de conexión a la base de datos")
         try:
+            _validate_positive_int("id_usuario", id_usuario)
+            if not _user_exists(conn, id_usuario):
+                raise Fault(faultstring="Usuario no encontrado")
+            _validate_non_empty_str("marca", marca, 100)
+            _validate_non_empty_str("numero_serie", numero_serie, 150)
             cur = conn.cursor()
             cur.execute(
                 "INSERT INTO Dispositivos (id_usuario, marca, numero_serie) VALUES (%s, %s, %s)",
@@ -47,6 +126,7 @@ class ApiService(ServiceBase):
         if conn is None:
             raise Fault(faultstring="Error de conexión")
         try:
+            _validate_positive_int("id_dispositivo", id_dispositivo)
             cur = conn.cursor()
             cur.execute("SELECT id_dispositivo, id_usuario, marca, numero_serie FROM Dispositivos WHERE id_dispositivo=%s", (id_dispositivo,))
             row = cur.fetchone()
@@ -64,6 +144,7 @@ class ApiService(ServiceBase):
         conn = database.conectar()
         if conn is None: raise Fault(faultstring="Error de conexión")
         try:
+            _validate_positive_int("id_usuario", id_usuario)
             cur = conn.cursor()
             cur.execute("SELECT id_dispositivo, id_usuario, marca, numero_serie FROM Dispositivos WHERE id_usuario=%s", (id_usuario,))
             lista = []
@@ -100,6 +181,9 @@ class ApiService(ServiceBase):
         conn = database.conectar()
         if conn is None: raise Fault(faultstring="Error de conexión")
         try:
+            _validate_positive_int("id_dispositivo", id_dispositivo)
+            _validate_non_empty_str("marca", marca, 100)
+            _validate_non_empty_str("numero_serie", numero_serie, 150)
             cur = conn.cursor()
             cur.execute("UPDATE Dispositivos SET marca=%s, numero_serie=%s WHERE id_dispositivo=%s", (marca, numero_serie, id_dispositivo))
             conn.commit()
@@ -114,6 +198,7 @@ class ApiService(ServiceBase):
         conn = database.conectar()
         if conn is None: raise Fault(faultstring="Error de conexión")
         try:
+            _validate_positive_int("id_dispositivo", id_dispositivo)
             cur = conn.cursor()
             cur.execute("DELETE FROM Dispositivos WHERE id_dispositivo=%s", (id_dispositivo,))
             eliminado = cur.rowcount > 0
@@ -156,6 +241,7 @@ class ApiService(ServiceBase):
         conn = database.conectar()
         if conn is None: raise Fault(faultstring="Error de conexión")
         try:
+            _validate_non_empty_str("modelo", modelo, 100)
             cur = conn.cursor()
             cur.execute("INSERT INTO dispositivos_iot (modelo) VALUES (%s)", (modelo,))
             conn.commit()
@@ -196,6 +282,21 @@ class ApiService(ServiceBase):
         conn = database.conectar()
         if conn is None: raise Fault(faultstring="Error de conexión")
         try:
+            _validate_positive_int("id_usuario", id_usuario)
+            if not _user_exists(conn, id_usuario):
+                raise Fault(faultstring="Usuario no encontrado")
+            actividades = ['Correr','Caminar','Nadar','Ciclismo','Levantamiento_de_pesas','Yoga','Otro']
+            if tipo_actividad not in actividades:
+                raise Fault(faultstring="tipo_actividad inválido")
+            fi = _parse_datetime("fecha_hora_inicio", fecha_hora_inicio)
+            ff = _parse_datetime("fecha_hora_fin", fecha_hora_fin)
+            if fi >= ff:
+                raise Fault(faultstring="Rango de fechas inválido")
+            _validate_range("duracion_segundos", duracion_segundos, 0, None)
+            _validate_range("distancia_metros", distancia_metros, 0, None)
+            _validate_range("calorias_quemadas", calorias_quemadas, 0, None)
+            _validate_latlng(latitud_inicio, longitud_inicio)
+            _validate_range("ritmo_promedio", ritmo_promedio, 0, None)
             cur = conn.cursor()
             cur.execute("""
                 INSERT INTO Sesiones_Entrenamiento (id_usuario, tipo_actividad, fecha_hora_inicio, fecha_hora_fin, duracion_segundos, distancia_metros, calorias_quemadas, latitud_inicio, longitud_inicio, ritmo_promedio)
@@ -219,6 +320,13 @@ class ApiService(ServiceBase):
         conn = database.conectar()
         if conn is None: raise Fault(faultstring="Error de conexión")
         try:
+            _validate_positive_int("id_usuario", id_usuario)
+            if not _user_exists(conn, id_usuario):
+                raise Fault(faultstring="Usuario no encontrado")
+            f_ini = _parse_date("fecha_inicio", fecha_inicio)
+            f_fin = _parse_date("fecha_fin", fecha_fin)
+            if f_ini > f_fin:
+                raise Fault(faultstring="Rango de fechas inválido")
             cur = conn.cursor()
             cur.execute("""
                 SELECT id_sesion, id_usuario, tipo_actividad, fecha_hora_inicio, fecha_hora_fin, duracion_segundos, distancia_metros, calorias_quemadas
@@ -246,6 +354,18 @@ class ApiService(ServiceBase):
         conn = database.conectar()
         if conn is None: raise Fault(faultstring="Error de conexión")
         try:
+            _validate_positive_int("id_usuario", id_usuario)
+            _validate_positive_int("id_dispositivo", id_dispositivo)
+            if not _device_belongs_to_user(conn, id_dispositivo, id_usuario):
+                raise Fault(faultstring="Dispositivo no pertenece al usuario")
+            fi = _parse_datetime("fecha_hora_inicio", fecha_hora_inicio)
+            ff = _parse_datetime("fecha_hora_fin", fecha_hora_fin)
+            if fi >= ff:
+                raise Fault(faultstring="Rango de fechas inválido")
+            _validate_range("km_recorridos", km_recorridos, 0, None)
+            _validate_range("calorias_quemadas", calorias_quemadas, 0, None)
+            _validate_range("frecuencia_cardiaca", frecuencia_cardiaca, 0, 300)
+            _validate_range("oxigenacion", oxigenacion, 0, 100)
             cur = conn.cursor()
             cur.execute("""
                 INSERT INTO Actividad_Fisica (id_usuario, id_dispositivo, fecha_hora_inicio, fecha_hora_fin, km_recorridos, calorias_quemadas, frecuencia_cardiaca, oxigenacion)
@@ -269,6 +389,12 @@ class ApiService(ServiceBase):
         conn = database.conectar()
         if conn is None: raise Fault(faultstring="Error de conexión")
         try:
+            _validate_positive_int("id_actividad", id_actividad)
+            _validate_positive_int("id_usuario", id_usuario)
+            _parse_datetime("fecha_hora_registro", fecha_hora_registro)
+            _validate_range("frecuencia_cardiaca", frecuencia_cardiaca, 0, 300)
+            _validate_range("oxigenacion", oxigenacion, 0, 100)
+            _validate_non_empty_str("presion", presion, 255)
             cur = conn.cursor()
             # Validación de propiedad
             cur.execute("SELECT 1 FROM Actividad_Fisica WHERE id_actividad=%s AND id_usuario=%s", (id_actividad, id_usuario))
@@ -293,6 +419,8 @@ class ApiService(ServiceBase):
         conn = database.conectar()
         if conn is None: raise Fault(faultstring="Error de conexión")
         try:
+            _validate_positive_int("id_usuario", id_usuario)
+            _parse_date("fecha", fecha)
             cur = conn.cursor()
             cur.execute("""
                 SELECT IFNULL(SUM(km_recorridos),0), IFNULL(SUM(calorias_quemadas),0),
